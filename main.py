@@ -101,11 +101,48 @@ def a_yymmdd(iso):
     return d.strftime("%y%m%d")
 
 
-def fecha_txt(yymmdd):
-    s = str(yymmdd or "").strip()
+def fecha_txt(valor):
+    """Muestra dd/mm/aaaa venga como AAMMDD, AAAAMMDD, AAAA-MM-DD o tipo fecha."""
+    if isinstance(valor, (dt.date, dt.datetime)):
+        return valor.strftime("%d/%m/%Y")
+    s = str(valor or "").strip()
     if len(s) == 6 and s.isdigit():
         return f"{s[4:6]}/{s[2:4]}/20{s[0:2]}"
+    if len(s) == 8 and s.isdigit():
+        return f"{s[6:8]}/{s[4:6]}/{s[0:4]}"
+    if len(s) >= 10 and s[4] == "-" and s[7] == "-":
+        return f"{s[8:10]}/{s[5:7]}/{s[0:4]}"
     return s
+
+
+_formato_fecha = {}
+
+
+def formato_fecha(conn, tabla):
+    """Detecta cómo está guardada la columna fecha: 'yymmdd', 'yyyymmdd' o 'iso'."""
+    if "f" not in _formato_fecha:
+        with conn.cursor() as cur:
+            cur.execute(f"SELECT `fecha` AS f FROM {tabla} ORDER BY `id` DESC LIMIT 20")
+            valores = [r["f"] for r in cur.fetchall() if str(r["f"] or "").strip()]
+        v = valores[0] if valores else None
+        txt = str(v or "").strip()
+        if isinstance(v, (dt.date, dt.datetime)) or (len(txt) >= 10 and txt[4] == "-"):
+            _formato_fecha["f"] = "iso"
+        elif len(txt) == 8 and txt.isdigit():
+            _formato_fecha["f"] = "yyyymmdd"
+        else:
+            _formato_fecha["f"] = "yymmdd"
+        print(f"[fecha] ejemplo={txt!r} formato={_formato_fecha['f']}", flush=True)
+    return _formato_fecha["f"]
+
+
+def rango_sql(desde, hasta, formato):
+    a, b = sorted([dt.date.fromisoformat(desde), dt.date.fromisoformat(hasta)])
+    if formato == "iso":
+        return a.isoformat(), b.isoformat() + " 23:59:59"
+    if formato == "yyyymmdd":
+        return a.strftime("%Y%m%d"), b.strftime("%Y%m%d")
+    return a.strftime("%y%m%d"), b.strftime("%y%m%d")
 
 
 def num(v):
@@ -204,6 +241,7 @@ def consultar(desde, hasta, texto):
     conn = conectar()
     try:
         tabla = "`" + nombre_tabla(conn).replace("`", "``") + "`"
+        d1, d2 = rango_sql(desde, hasta, formato_fecha(conn, tabla))
         sql = (f"SELECT {', '.join('`'+c+'`' for c in COLUMNAS)} FROM {tabla} "
                "WHERE `fecha` BETWEEN %s AND %s")
         params = [d1, d2]
@@ -290,6 +328,24 @@ def registrar_autorizacion(r, usuario, motivo, ip):
             conn.close()
     except Exception as ex:
         print(f"[nip] no se pudo guardar la bitácora: {ex}", flush=True)
+
+
+def ultimo_recibo():
+    """Fecha y folio del recibo más reciente, para orientar cuando un periodo sale vacío."""
+    if DEMO_CSV:
+        return None
+    conn = conectar()
+    try:
+        tabla = "`" + nombre_tabla(conn).replace("`", "``") + "`"
+        with conn.cursor() as cur:
+            cur.execute(f"SELECT COUNT(*) AS n FROM {tabla}")
+            n = cur.fetchone()["n"]
+            cur.execute(f"SELECT `fecha`, `recibo` FROM {tabla} ORDER BY `id` DESC LIMIT 1")
+            r = cur.fetchone()
+        return {"total": int(n), "tabla": nombre_tabla(conn),
+                "fecha": fecha_txt(r["fecha"]) if r else "", "folio": str(r["recibo"] if r else "").strip()}
+    finally:
+        conn.close()
 
 
 def totales(filas):
@@ -462,7 +518,13 @@ def api_recibos():
         filas = consultar(*leer_filtros())
     except Exception as ex:
         return jsonify(error=f"No se pudo consultar: {ex}"), 500
-    return jsonify(filas=filas, totales=totales(filas), limite=len(filas) >= MAX_FILAS)
+    ultimo = None
+    if not filas:
+        try:
+            ultimo = ultimo_recibo()
+        except Exception as ex:
+            print(f"[ultimo] {ex}", flush=True)
+    return jsonify(filas=filas, totales=totales(filas), limite=len(filas) >= MAX_FILAS, ultimo=ultimo)
 
 
 @app.route("/api/resumen")
@@ -822,7 +884,7 @@ const CONFIGURADO = {{ 'true' if configurado else 'false' }};
 const PUEDE_CANCELAR = {{ 'true' if puede_cancelar else 'false' }};
 const $ = id => document.getElementById(id);
 const dlg = $("dlg");
-let filas = [], vista = "tabla";
+let filas = [], vista = "tabla", ULTIMO = null;
 
 const dinero = n => "$" + Number(n || 0).toLocaleString("es-MX", {minimumFractionDigits: 2, maximumFractionDigits: 2});
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -847,6 +909,7 @@ async function buscar() {
   try {
     const data = await pedir("/api/recibos?" + params());
     filas = data.filas;
+    ULTIMO = data.ultimo;
     const t = data.totales;
     $("tNeto").textContent = dinero(t.neto);
     $("tDesc").textContent = dinero(t.descuento);
@@ -859,7 +922,13 @@ async function buscar() {
 }
 
 function pintar() {
-  if (!filas.length) return mensaje("No hay recibos en este periodo. Cambia las fechas y toca Buscar.");
+  if (!filas.length) {
+    let txt = "No hay recibos en este periodo. Cambia las fechas y toca Buscar.";
+    if (ULTIMO) txt += ULTIMO.total
+      ? ` (La tabla ${ULTIMO.tabla} tiene ${Number(ULTIMO.total).toLocaleString("es-MX")} recibos; el último es el folio ${ULTIMO.folio} del ${ULTIMO.fecha}.)`
+      : ` (La tabla ${ULTIMO.tabla} está vacía en esta base.)`;
+    return mensaje(txt);
+  }
   if (vista === "tabla") {
     $("resultados").innerHTML = `<div class="tabla-wrap"><table><thead><tr>
       <th>FOLIO</th><th>FECHA</th><th>CONTRIBUYENTE</th><th>CONCEPTO</th>
