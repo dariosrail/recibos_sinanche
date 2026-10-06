@@ -1,0 +1,6 @@
+flask
+pymysql
+cryptography
+waitress
+openpyxl
+reportlab
