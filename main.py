@@ -554,7 +554,7 @@ def excel():
     ws = wb.active
     ws.title = "Recibos"
     ws["A1"] = "H. Ayuntamiento de Sinanché - Consulta de Recibos"
-    ws["A1"].font = Font(bold=True, size=14, color="6D1F35")
+    ws["A1"].font = Font(bold=True, size=14, color="0054A6")
     ws["A2"] = f"Del {fecha_txt(a_yymmdd(desde))} al {fecha_txt(a_yymmdd(hasta))}" + (f"  ·  Contribuyente: {q}" if q else "")
     ws["A3"] = (f"Total neto: ${t['neto']:,.2f}   Descuento: ${t['descuento']:,.2f}   "
                 f"Recibos: {t['recibos']}   Cancelados: {t['cancelados']}"
@@ -567,7 +567,7 @@ def excel():
     fila_enc = ws.max_row
     for c in ws[fila_enc]:
         c.font = Font(bold=True, color="FFFFFF")
-        c.fill = PatternFill("solid", fgColor="6D1F35")
+        c.fill = PatternFill("solid", fgColor="0054A6")
         c.alignment = Alignment(vertical="center")
     rojo = Font(color="C0392B")
     for f in filas:
@@ -606,8 +606,8 @@ def pdf():
     filas = consultar(desde, hasta, q)
     t = totales(filas)
 
-    vino = colors.HexColor("#6D1F35")
-    oro = colors.HexColor("#C29B5B")
+    vino = colors.HexColor("#0054A6")
+    oro = colors.HexColor("#3C8DDB")
     st_t = ParagraphStyle("t", fontName="Helvetica-Bold", fontSize=15, textColor=vino, leading=18)
     st_s = ParagraphStyle("s", fontName="Helvetica", fontSize=9.5, leading=13)
     st_c = ParagraphStyle("c", fontName="Helvetica", fontSize=7.5, leading=9)
@@ -638,7 +638,7 @@ def pdf():
         ("ALIGN", (4, 1), (4, -1), "RIGHT"),
         ("ALIGN", (6, 1), (6, -1), "RIGHT"),
         ("LINEBELOW", (0, 0), (-1, 0), 1.2, oro),
-        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F6F3F0")]),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#EEF3F9")]),
     ]
     for i, f in enumerate(filas, 1):
         ps = st_cr if f["cancelado"] else st_c
@@ -675,8 +675,8 @@ def pdf():
 # ------------------------------------------------------------------ HTML
 CSS = """
 :root{
-  --vino:#6D1F35; --vino-osc:#521627; --oro:#C29B5B; --verde:#12332C;
-  --fondo:#F2F1EF; --tinta:#2A2326; --gris:#6F6669; --linea:#E3DEDA; --rojo:#C0392B; --ok:#1E8A55;
+  --vino:#0054A6; --vino-osc:#003D7A; --oro:#3C8DDB; --verde:#002B5C;
+  --fondo:#EEF3F9; --tinta:#1E2733; --gris:#5F6B7A; --linea:#DCE4EE; --rojo:#C0392B; --ok:#1E8A55;
 }
 *{box-sizing:border-box}
 html,body{margin:0}
@@ -705,34 +705,34 @@ nav a.activo{border-bottom:2px solid var(--vino);color:var(--vino)}
 .btn-hoy{background:transparent;color:#fff;border:1.5px solid #fff;font-weight:500}
 .btn:hover{filter:brightness(1.08)}
 main{padding:26px 0 50px}
-.totales{background:#fff;border-left:5px solid var(--oro);border-radius:4px;padding:18px 20px;box-shadow:0 1px 3px rgba(60,20,30,.07)}
+.totales{background:#fff;border-left:5px solid var(--oro);border-radius:4px;padding:18px 20px;box-shadow:0 1px 3px rgba(0,40,90,.08)}
 .totales .neto{font-size:22px}
 .totales .neto span{color:var(--ok)}
 .totales .desc{font-size:17px;margin-top:6px}
 .totales .cuentas{font-size:14px;color:var(--gris);margin-top:8px}
 .totales .cuentas .canc{color:var(--rojo)}
 .barra{display:flex;justify-content:flex-end;align-items:center;gap:12px;margin:20px 0 16px;flex-wrap:wrap}
-.vista{display:inline-flex;border:1px solid #bdb5b1;border-radius:4px;overflow:hidden}
+.vista{display:inline-flex;border:1px solid #B3C2D4;border-radius:4px;overflow:hidden}
 .vista button{background:#fff;border:0;padding:7px 14px;font:inherit;font-size:14px;cursor:pointer;color:var(--gris)}
-.vista button+button{border-left:1px solid #bdb5b1}
-.vista button.on{background:#EDE6E1;color:var(--tinta);font-weight:600}
+.vista button+button{border-left:1px solid #B3C2D4}
+.vista button.on{background:#E1ECF8;color:var(--tinta);font-weight:600}
 .btn-desc{height:auto;min-height:52px;padding:6px 18px;font-size:15px;font-weight:600;background:#fff;line-height:1.25}
 .btn-xls{border:1.5px solid var(--ok);color:var(--ok)}
 .btn-pdf{border:1.5px solid var(--rojo);color:var(--rojo)}
 .mensaje{padding:28px;text-align:center;color:var(--gris)}
 .mensaje.error{color:var(--rojo)}
-.tabla-wrap{overflow-x:auto;background:#fff;border-left:4px solid var(--oro);border-radius:4px;box-shadow:0 1px 3px rgba(60,20,30,.07)}
+.tabla-wrap{overflow-x:auto;background:#fff;border-left:4px solid var(--oro);border-radius:4px;box-shadow:0 1px 3px rgba(0,40,90,.08)}
 table{border-collapse:collapse;width:100%;font-size:14px}
 th{text-align:left;font-size:12.5px;font-weight:700;letter-spacing:.03em;padding:12px 10px;white-space:nowrap;border-bottom:2px solid var(--linea);position:sticky;top:0;background:#fff}
 td{padding:10px;border-bottom:1px solid var(--linea);vertical-align:top}
 td.num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
 tr.fila{cursor:pointer}
-tr.fila:hover td{background:#FAF6F3}
+tr.fila:hover td{background:#F2F7FD}
 tr.cancelado td{color:var(--rojo);text-decoration:line-through;text-decoration-thickness:1px}
 tr.cancelado td.estado{text-decoration:none}
 .tag{display:inline-block;font-size:11px;font-weight:700;padding:2px 7px;border-radius:3px;background:#FBE9E7;color:var(--rojo);text-decoration:none}
 .tarjetas{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
-.tarjeta{background:#fff;border-radius:4px;padding:14px 16px;border-top:3px solid var(--vino);box-shadow:0 1px 3px rgba(60,20,30,.07);cursor:pointer}
+.tarjeta{background:#fff;border-radius:4px;padding:14px 16px;border-top:3px solid var(--vino);box-shadow:0 1px 3px rgba(0,40,90,.08);cursor:pointer}
 .tarjeta.cancelado{border-top-color:var(--rojo);opacity:.85}
 .tarjeta .arriba{display:flex;justify-content:space-between;font-size:13px;color:var(--gris)}
 .tarjeta .nombre{font-weight:700;margin:6px 0 4px;line-height:1.25}
@@ -742,7 +742,7 @@ tr.cancelado td.estado{text-decoration:none}
 .tarjeta.cancelado .monto{color:var(--rojo);text-decoration:line-through}
 .tarjeta .pago{font-size:12px;color:var(--gris)}
 dialog{border:0;border-radius:6px;padding:0;max-width:720px;width:calc(100% - 32px);box-shadow:0 10px 40px rgba(0,0,0,.25)}
-dialog::backdrop{background:rgba(30,10,15,.45)}
+dialog::backdrop{background:rgba(0,20,50,.45)}
 .dlg-cab{background:var(--vino);color:#fff;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid var(--oro)}
 .dlg-cab h2{margin:0;font-size:19px;font-weight:600}
 .dlg-cab button{background:none;border:0;color:#fff;font-size:26px;cursor:pointer;line-height:1}
@@ -769,9 +769,9 @@ dialog::backdrop{background:rgba(30,10,15,.45)}
 .opcion-folio:hover{border-color:var(--vino)}
 .acciones{display:flex;gap:10px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}
 .btn-rojo{background:var(--rojo);color:#fff}
-.btn-gris{background:#E6E1DE;color:var(--tinta)}
+.btn-gris{background:#E2E8F0;color:var(--tinta)}
 .aviso-confirma{background:#FBE9E7;border-left:4px solid var(--rojo);padding:14px 16px;border-radius:4px;font-size:16px;line-height:1.45}
-.nip-caja{text-align:center;border:2px dashed var(--oro);border-radius:6px;padding:18px 14px;background:#FFFBF4}
+.nip-caja{text-align:center;border:2px dashed var(--oro);border-radius:6px;padding:18px 14px;background:#F4F9FF}
 .nip-tit{font-size:14px;color:var(--gris);font-weight:600;letter-spacing:.04em}
 .nip-num{font-family:"Montserrat",Arial,sans-serif;font-size:46px;font-weight:800;color:var(--vino);letter-spacing:.12em;margin:6px 0;font-variant-numeric:tabular-nums;user-select:all}
 .nip-sub{font-size:14px;color:var(--tinta)}
